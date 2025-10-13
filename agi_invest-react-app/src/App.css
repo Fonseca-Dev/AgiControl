@@ -1,0 +1,23 @@
+/* Container principal do app - dimensões absolutamente fixas */
+.app-container {
+  width: 393px !important;
+  height: 852px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Estilo para placeholders customizados */
+.custom-input {
+  background-color: #f8f8f8 !important;
+  color: #b2b2b2 !important;
+}
+
+.custom-input:focus {
+  background-color: white !important;
+  color: #b2b2b2 !important;
+}
+
+.custom-input::placeholder {
+  color: #374151 !important;
+}
+
