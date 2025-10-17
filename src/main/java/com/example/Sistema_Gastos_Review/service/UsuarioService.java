@@ -15,7 +15,6 @@ import com.example.Sistema_Gastos_Review.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -53,7 +52,7 @@ public class UsuarioService {
         return new BaseResponse("Usuario cadastrado com sucesso.", HttpStatus.CREATED, UsuarioMapper.toCriarUsuarioReponse(novoUsuario));
     }
 
-    public BaseResponse alterarUsuario(String id, AlterarUsuarioRequest request) {
+    public BaseResponse alterarUsuario(String id, String idConta, AlterarUsuarioRequest request) {
         Optional<Usuario> encontrado = usuarioRepository.findById(id);
         if (encontrado.isEmpty()) {
             return new BaseResponse(
@@ -68,21 +67,31 @@ public class UsuarioService {
                     HttpStatus.CONFLICT,
                     null);
         }
+        Optional<Conta> contaEncontrada = contaRepository.findById(idConta);
+        if (contaEncontrada.isEmpty()) {
+            return new BaseResponse("Conta nao encontrada!",
+                    HttpStatus.NOT_FOUND,
+                    null);
+        }
+        Conta conta = contaEncontrada.get();
 
         Usuario alterado = encontrado.get();
         alterado.setNome(request.nome());
         alterado.setEmail(request.email());
+        conta.setChavePix(request.email());
         alterado.setSenha(request.senha());
         usuarioRepository.save(alterado);
+        contaRepository.save(conta);
+
         return new BaseResponse(
                 "Usuario alterado com sucesso.",
                 HttpStatus.OK,
                 UsuarioMapper.toAlterarUsuarioResponse(alterado));
     }
 
-    public BaseResponse deletarUsuario(String id){
+    public BaseResponse deletarUsuario(String id) {
         Optional<Usuario> encontrado = usuarioRepository.findById(id);
-        if(encontrado.isPresent()){
+        if (encontrado.isPresent()) {
             encontrado.get().setEstado("DELETADO");
             usuarioRepository.save(encontrado.get());
             return new BaseResponse(
@@ -96,9 +105,9 @@ public class UsuarioService {
                 null);
     }
 
-    public BaseResponse loginPorEmailESenha(LoginUsuarioRequest request){
+    public BaseResponse loginPorEmailESenha(LoginUsuarioRequest request) {
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findByEmail(request.email());
-        if (usuarioEncontrado.isEmpty()){
+        if (usuarioEncontrado.isEmpty()) {
             return new BaseResponse(
                     "E-mail ou senha incorreta.",
                     HttpStatus.NOT_FOUND,
@@ -106,7 +115,7 @@ public class UsuarioService {
             );
         }
         Usuario usuario = usuarioEncontrado.get();
-        if (!usuario.getSenha().equalsIgnoreCase(request.senha())){
+        if (!usuario.getSenha().equalsIgnoreCase(request.senha())) {
             return new BaseResponse(
                     "E-mail ou senha incorreta.",
                     HttpStatus.CONFLICT,
@@ -121,9 +130,9 @@ public class UsuarioService {
                 loginUsuarioResponse);
     }
 
-    public BaseResponse confirmarSenha(String idUsuario, ConfirmarSenhaRequest request){
+    public BaseResponse confirmarSenha(String idUsuario, ConfirmarSenhaRequest request) {
         Optional<Usuario> encontrado = usuarioRepository.findById(idUsuario);
-        if(encontrado.isEmpty()){
+        if (encontrado.isEmpty()) {
             return new BaseResponse(
                     "Usuario não encontrado",
                     HttpStatus.NOT_FOUND,
@@ -131,7 +140,7 @@ public class UsuarioService {
             );
         }
         Usuario usuario = encontrado.get();
-        if(!usuario.getSenha().equalsIgnoreCase(request.senha())){
+        if (!usuario.getSenha().equalsIgnoreCase(request.senha())) {
             return new BaseResponse(
                     "Senha incorreta.",
                     HttpStatus.CONFLICT,

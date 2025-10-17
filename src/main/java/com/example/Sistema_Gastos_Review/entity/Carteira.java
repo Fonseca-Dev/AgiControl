@@ -36,4 +36,12 @@ public class Carteira {
     @ManyToOne
     @JoinColumn(name = "id_conta")
     Conta conta;
+
+    // Relacionamento com a transação de criação
+    @OneToOne(mappedBy = "carteira", cascade = CascadeType.ALL)
+    private CriarCarteira transacaoCriacao;
+
+    // Relacionamento com a transação de deleção (pode ser null se ainda não foi deletada)
+    @OneToOne(mappedBy = "carteira", cascade = CascadeType.ALL)
+    private DeletarCarteira transacaoDeletacao;
 }

@@ -8,9 +8,9 @@ public record TransacaoPixResponse(
         String tipo,
         LocalDateTime data,
         BigDecimal valor,
+        String nomeRemetente,
         String chavePixDestino,
         String nomeDestinatario,
-        String categoria,
-        Long numConta
+        String categoria
 ) {
 }

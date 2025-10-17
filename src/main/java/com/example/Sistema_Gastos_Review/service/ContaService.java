@@ -106,7 +106,7 @@ public class ContaService {
         if(contas.isEmpty()){
             return new BaseResponse(
                     "Nenhuma conta encontrada.",
-                    HttpStatus.NOT_FOUND,
+                    HttpStatus.OK,
                     null
             );
         }

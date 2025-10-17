@@ -22,6 +22,7 @@ public class CarteiraMapper {
 
     public static CriarCarteiraResponse toCriarCarteiraResponse(Carteira carteira) {
         return new CriarCarteiraResponse(
+                carteira.getId(),
                 carteira.getNome(),
                 carteira.getSaldo()
         );

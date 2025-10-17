@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -899,7 +900,7 @@ public class TransacaoService {
         if (contaCarteiraList.isEmpty()) {
             return new BaseResponse(
                     "Nenhuma transacao encontrada na carteira informada.",
-                    HttpStatus.NOT_FOUND,
+                    HttpStatus.OK,
                     null
             );
         }
@@ -909,7 +910,8 @@ public class TransacaoService {
                 TransacaoMapper.listarTransacoesCarteiraResponse(contaCarteiraList)
         );
     }
-    public BaseResponse listarTransacoesPorCategoriaPorDia(String idUsuario, String idConta, String categoria, int ano, int mes, int dia){
+
+    public BaseResponse listarTransacoesPorCategoriaPorDia(String idUsuario, String idConta, String categoria, int ano, int mes, int dia) {
         //Validação para ver se o usuário informado é válido
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
         if (usuarioEncontrado.isEmpty()) {
@@ -1020,7 +1022,8 @@ public class TransacaoService {
         );
 
     }
-    public BaseResponse listarTransacoesPorCategoriaPorMes(String idUsuario, String idConta, String categoria, int ano, int mes){
+
+    public BaseResponse listarTransacoesPorCategoriaPorMes(String idUsuario, String idConta, String categoria, int ano, int mes) {
         //Validação para ver se o usuário informado é válido
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
         if (usuarioEncontrado.isEmpty()) {
@@ -1130,6 +1133,7 @@ public class TransacaoService {
                 todosGastos
         );
     }
+
     public BaseResponse categoriasMaisUsadasPorContaMesAno(String idUsuario, String idConta, int ano, int mes) {
 
         //Validação para ver se o usuário informado é válido
@@ -1170,10 +1174,12 @@ public class TransacaoService {
         todasAsTransacoesDeSaida.addAll(pixRepository.findByContaId(idConta));
 
         if (todasAsTransacoesDeSaida.isEmpty()) {
-            return new BaseResponse("Nenhuma transação com categoria encontrada.", HttpStatus.NOT_FOUND, null);
+            return new BaseResponse(
+                    "Nenhuma transação com categoria encontrada.",
+                    HttpStatus.OK,
+                    null);
         }
 
-        // O resto da lógica de stream funcionará como esperado
         List<CategoriaResponse> categoriaResponses = todasAsTransacoesDeSaida.stream()
                 .filter(t -> t.getData().getYear() == ano && t.getData().getMonthValue() == mes)
                 .filter(t -> t.getCategoria() != null && !t.getCategoria().isBlank())
@@ -1188,10 +1194,254 @@ public class TransacaoService {
                 .toList();
 
         if (categoriaResponses.isEmpty()) {
-            return new BaseResponse("Nenhuma categoria de gasto encontrada para o período.", HttpStatus.OK, null);
+            return new BaseResponse(
+                    "Nenhuma categoria de gasto encontrada para o período.",
+                    HttpStatus.OK,
+                    null);
         }
 
         return new BaseResponse("Categorias encontradas.", HttpStatus.OK, categoriaResponses);
+    }
+
+    public BaseResponse calcularGastoDaContaPorMesPorTipoTransacao(String idUsuario, String idConta, int ano, int mes) {
+        //Validação para ver se o usuário informado é válido
+        Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
+        if (usuarioEncontrado.isEmpty()) {
+            return new BaseResponse(
+                    "Usuario nao encontrado.",
+                    HttpStatus.NOT_FOUND,
+                    null
+            );
+        }
+        Usuario usuario = usuarioEncontrado.get();
+
+        //Validação para ver se a conta informada é válida
+        Optional<Conta> contaEncontrada = contaRepository.findById(idConta);
+        if (contaEncontrada.isEmpty()) {
+            return new BaseResponse(
+                    "Conta nao encontrada."
+                    , HttpStatus.NOT_FOUND,
+                    null);
+        }
+        Conta conta = contaEncontrada.get();
+
+        //Validação para saber se a conta pertence ao usuario informado
+        if (!conta.getUsuario().getId().equalsIgnoreCase(usuario.getId())) {
+            return new BaseResponse(
+                    "Conta nao pertence ao usuario informado.",
+                    HttpStatus.CONFLICT,
+                    null
+            );
+        }
+
+        List<PagamentoBoleto> gastosBoleto = pagamentoBoletoRepository.findByContaId(idConta);
+        List<PagamentoDebito> gastosDebito = pagamentoDebitoRepository.findByContaId(idConta);
+        List<Pix> gastosPix = pixRepository.findByContaId(idConta);
+        List<Transferencia> gastosTransferencia = transferenciaRepository.findByContaOrigem_Id(idConta);
+
+        List<GastosReponse> todosGastosBoletos = gastosBoleto
+                .stream()
+                .filter(pagamentoBoleto ->
+                        pagamentoBoleto.getData().getYear() == ano &&
+                                pagamentoBoleto.getData().getMonthValue() == mes)
+                .map(pagamentoBoleto -> new GastosReponse(
+                        pagamentoBoleto.getData(),
+                        pagamentoBoleto.getTipo(),
+                        pagamentoBoleto.getValor(),
+                        pagamentoBoleto.getCategoria()
+                )).toList();
+
+        List<GastosReponse> todosGastosDebito = gastosDebito
+                .stream()
+                .filter(pagamentoDebito ->
+                        pagamentoDebito.getData().getYear() == ano &&
+                                pagamentoDebito.getData().getMonthValue() == mes)
+                .map(pagamentoDebito -> new GastosReponse(
+                        pagamentoDebito.getData(),
+                        pagamentoDebito.getTipo(),
+                        pagamentoDebito.getValor(),
+                        pagamentoDebito.getCategoria()
+                )).toList();
+
+        List<GastosReponse> todosGastosPix = gastosPix
+                .stream()
+                .filter(pix ->
+                        pix.getData().getYear() == ano &&
+                                pix.getData().getMonthValue() == mes)
+                .map(pix -> new GastosReponse(
+                        pix.getData(),
+                        pix.getTipo(),
+                        pix.getValor(),
+                        pix.getCategoria()
+                ))
+                .toList();
+
+        List<GastosReponse> todosGastosTransferencia = gastosTransferencia
+                .stream()
+                .filter(transferencia ->
+                        transferencia.getData().getYear() == ano &&
+                                transferencia.getData().getMonthValue() == mes)
+                .map(transferencia -> new GastosReponse(
+                        transferencia.getData(),
+                        transferencia.getTipo(),
+                        transferencia.getValor(),
+                        transferencia.getCategoria()
+                ))
+                .toList();
+
+        List<GastosReponse> todosGastos = new ArrayList<>();
+        todosGastos.addAll(todosGastosBoletos);
+        todosGastos.addAll(todosGastosDebito);
+        todosGastos.addAll(todosGastosPix);
+        todosGastos.addAll(todosGastosTransferencia);
+
+        if (todosGastos.isEmpty()) {
+            return new BaseResponse(
+                    "Nenhum gasto encontrada no mes " + mes + "/" + ano,
+                    HttpStatus.OK,
+                    null
+            );
+        }
+
+
+        List<TipoGastoEValorResponse> gastosReponses = todosGastos
+                .stream()
+                .collect(Collectors.groupingBy(GastosReponse::tipo,
+                        Collectors.mapping(GastosReponse::valor,
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                )).entrySet().stream().map(gastoResponse ->
+                        new TipoGastoEValorResponse(gastoResponse.getKey(), gastoResponse.getValue())).toList();
+
+        return new BaseResponse(
+                "Gastos encontrados.",
+                HttpStatus.OK,
+                gastosReponses
+        );
+
+
+    }
+
+    public BaseResponse calcularGastoDaContaPorDia(String idUsuario, String idConta, int ano, int mes, int dia) {
+        //Validação para ver se o usuário informado é válido
+        Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
+        if (usuarioEncontrado.isEmpty()) {
+            return new BaseResponse(
+                    "Usuario nao encontrado.",
+                    HttpStatus.NOT_FOUND,
+                    null
+            );
+        }
+        Usuario usuario = usuarioEncontrado.get();
+
+        //Validação para ver se a conta informada é válida
+        Optional<Conta> contaEncontrada = contaRepository.findById(idConta);
+        if (contaEncontrada.isEmpty()) {
+            return new BaseResponse(
+                    "Conta nao encontrada."
+                    , HttpStatus.NOT_FOUND,
+                    null);
+        }
+        Conta conta = contaEncontrada.get();
+
+        //Validação para saber se a conta pertence ao usuario informado
+        if (!conta.getUsuario().getId().equalsIgnoreCase(usuario.getId())) {
+            return new BaseResponse(
+                    "Conta nao pertence ao usuario informado.",
+                    HttpStatus.CONFLICT,
+                    null
+            );
+        }
+
+
+        List<PagamentoBoleto> gastosBoleto = pagamentoBoletoRepository.findByContaId(idConta);
+        List<PagamentoDebito> gastosDebito = pagamentoDebitoRepository.findByContaId(idConta);
+        List<Pix> gastosPix = pixRepository.findByContaId(idConta);
+        List<Transferencia> gastosTransferencia = transferenciaRepository.findByContaOrigem_Id(idConta);
+
+        List<GastosReponse> todosGastosBoletos = gastosBoleto
+                .stream()
+                .filter(pagamentoBoleto ->
+                        pagamentoBoleto.getData().getYear() == ano &&
+                                pagamentoBoleto.getData().getMonthValue() == mes &&
+                                pagamentoBoleto.getData().getDayOfMonth() == dia)
+                .map(pagamentoBoleto -> new GastosReponse(
+                        pagamentoBoleto.getData(),
+                        pagamentoBoleto.getTipo(),
+                        pagamentoBoleto.getValor(),
+                        pagamentoBoleto.getCategoria()
+                )).toList();
+
+        List<GastosReponse> todosGastosDebito = gastosDebito
+                .stream()
+                .filter(pagamentoDebito ->
+                        pagamentoDebito.getData().getYear() == ano &&
+                                pagamentoDebito.getData().getMonthValue() == mes &&
+                                pagamentoDebito.getData().getDayOfMonth() == dia)
+                .map(pagamentoDebito -> new GastosReponse(
+                        pagamentoDebito.getData(),
+                        pagamentoDebito.getTipo(),
+                        pagamentoDebito.getValor(),
+                        pagamentoDebito.getCategoria()
+                )).toList();
+
+        List<GastosReponse> todosGastosPix = gastosPix
+                .stream()
+                .filter(pix ->
+                        pix.getData().getYear() == ano &&
+                                pix.getData().getMonthValue() == mes &&
+                                pix.getData().getDayOfMonth() == dia)
+                .map(pix -> new GastosReponse(
+                        pix.getData(),
+                        pix.getTipo(),
+                        pix.getValor(),
+                        pix.getCategoria()
+                ))
+                .toList();
+
+        List<GastosReponse> todosGastosTransferencia = gastosTransferencia
+                .stream()
+                .filter(transferencia ->
+                        transferencia.getData().getYear() == ano &&
+                                transferencia.getData().getMonthValue() == mes &&
+                                transferencia.getData().getDayOfMonth() == dia)
+                .map(transferencia -> new GastosReponse(
+                        transferencia.getData(),
+                        transferencia.getTipo(),
+                        transferencia.getValor(),
+                        transferencia.getCategoria()
+                ))
+                .toList();
+
+        List<GastosReponse> todosGastos = new ArrayList<>();
+        todosGastos.addAll(todosGastosBoletos);
+        todosGastos.addAll(todosGastosDebito);
+        todosGastos.addAll(todosGastosPix);
+        todosGastos.addAll(todosGastosTransferencia);
+
+        if (todosGastos.isEmpty()) {
+            return new BaseResponse(
+                    "Nenhum gasto encontrada na data " + dia + "/" + mes + "/" + ano,
+                    HttpStatus.OK,
+                    null
+            );
+        }
+
+        List<TipoGastoEValorResponse> gastosReponses = todosGastos
+                .stream()
+                .collect(Collectors.groupingBy(GastosReponse::tipo,
+                        Collectors.mapping(GastosReponse::valor,
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ))
+                .entrySet().stream()
+                .map(gastoResponse ->
+                        new TipoGastoEValorResponse(gastoResponse.getKey(), gastoResponse.getValue())).toList();
+
+        return new BaseResponse(
+                "Gastos encontrados.",
+                HttpStatus.OK,
+                gastosReponses
+        );
+
     }
 
     public BaseResponse calcularGastoDaContaPorMes(String idUsuario, String idConta, int ano, int mes) {
@@ -1350,126 +1600,7 @@ public class TransacaoService {
 
     }
 
-    public BaseResponse calcularGastoDaContaPorMesPorTipoTransacao(String idUsuario, String idConta, int ano, int mes){
-        //Validação para ver se o usuário informado é válido
-        Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
-        if (usuarioEncontrado.isEmpty()) {
-            return new BaseResponse(
-                    "Usuario nao encontrado.",
-                    HttpStatus.NOT_FOUND,
-                    null
-            );
-        }
-        Usuario usuario = usuarioEncontrado.get();
-
-        //Validação para ver se a conta informada é válida
-        Optional<Conta> contaEncontrada = contaRepository.findById(idConta);
-        if (contaEncontrada.isEmpty()) {
-            return new BaseResponse(
-                    "Conta nao encontrada."
-                    , HttpStatus.NOT_FOUND,
-                    null);
-        }
-        Conta conta = contaEncontrada.get();
-
-        //Validação para saber se a conta pertence ao usuario informado
-        if (!conta.getUsuario().getId().equalsIgnoreCase(usuario.getId())) {
-            return new BaseResponse(
-                    "Conta nao pertence ao usuario informado.",
-                    HttpStatus.CONFLICT,
-                    null
-            );
-        }
-
-        List<PagamentoBoleto> gastosBoleto = pagamentoBoletoRepository.findByContaId(idConta);
-        List<PagamentoDebito> gastosDebito = pagamentoDebitoRepository.findByContaId(idConta);
-        List<Pix> gastosPix = pixRepository.findByContaId(idConta);
-        List<Transferencia> gastosTransferencia = transferenciaRepository.findByContaOrigem_Id(idConta);
-
-        List<GastosReponse> todosGastosBoletos = gastosBoleto
-                .stream()
-                .filter(pagamentoBoleto ->
-                        pagamentoBoleto.getData().getYear() == ano &&
-                                pagamentoBoleto.getData().getMonthValue() == mes)
-                .map(pagamentoBoleto -> new GastosReponse(
-                        pagamentoBoleto.getData(),
-                        pagamentoBoleto.getTipo(),
-                        pagamentoBoleto.getValor(),
-                        pagamentoBoleto.getCategoria()
-                )).toList();
-
-        List<GastosReponse> todosGastosDebito = gastosDebito
-                .stream()
-                .filter(pagamentoDebito ->
-                        pagamentoDebito.getData().getYear() == ano &&
-                                pagamentoDebito.getData().getMonthValue() == mes)
-                .map(pagamentoDebito -> new GastosReponse(
-                        pagamentoDebito.getData(),
-                        pagamentoDebito.getTipo(),
-                        pagamentoDebito.getValor(),
-                        pagamentoDebito.getCategoria()
-                )).toList();
-
-        List<GastosReponse> todosGastosPix = gastosPix
-                .stream()
-                .filter(pix ->
-                        pix.getData().getYear() == ano &&
-                                pix.getData().getMonthValue() == mes)
-                .map(pix -> new GastosReponse(
-                        pix.getData(),
-                        pix.getTipo(),
-                        pix.getValor(),
-                        pix.getCategoria()
-                ))
-                .toList();
-
-        List<GastosReponse> todosGastosTransferencia = gastosTransferencia
-                .stream()
-                .filter(transferencia ->
-                        transferencia.getData().getYear() == ano &&
-                                transferencia.getData().getMonthValue() == mes)
-                .map(transferencia -> new GastosReponse(
-                        transferencia.getData(),
-                        transferencia.getTipo(),
-                        transferencia.getValor(),
-                        transferencia.getCategoria()
-                ))
-                .toList();
-
-        List<GastosReponse> todosGastos = new ArrayList<>();
-        todosGastos.addAll(todosGastosBoletos);
-        todosGastos.addAll(todosGastosDebito);
-        todosGastos.addAll(todosGastosPix);
-        todosGastos.addAll(todosGastosTransferencia);
-
-        if (todosGastos.isEmpty()) {
-            return new BaseResponse(
-                    "Nenhum gasto encontrada no mes " + mes + "/" + ano,
-                    HttpStatus.OK,
-                    null
-            );
-        }
-
-
-
-        List<TipoGastoEValorResponse> gastosReponses = todosGastos
-                .stream()
-                .collect(Collectors.groupingBy(GastosReponse::tipo,
-                        Collectors.mapping(GastosReponse::valor,
-                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
-                                )).entrySet().stream().map(gastoResponse ->
-                        new TipoGastoEValorResponse(gastoResponse.getKey(), gastoResponse.getValue())).toList();
-
-        return new BaseResponse(
-                "Gastos encontrados.",
-                HttpStatus.OK,
-                gastosReponses
-        );
-
-
-    }
-
-    public BaseResponse calcularGastoDaContaPorAno(String idUsuario, String idConta, int ano) {
+    public BaseResponse calcularGastoPorCategoriaPorMesPorAno(String idUsuario, String idConta, int ano) {
         //Validação para ver se o usuário informado é válido
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
         if (usuarioEncontrado.isEmpty()) {
@@ -1566,25 +1697,59 @@ public class TransacaoService {
             );
         }
 
-        List<TipoGastoEValorResponse> gastosReponses = todosGastos
+        // Agrupar por mês e categoria, somando os valores
+        List<MesTipoGastoEValorResponse> gastosReponse = todosGastos
                 .stream()
-                .collect(Collectors.groupingBy(GastosReponse::tipo,
-                        Collectors.mapping(GastosReponse::valor,
-                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                // Agrupar por ano-mês
+                .collect(Collectors.groupingBy(gasto ->
+                        LocalDateTime.of(
+                                gasto.data().getYear(),
+                                gasto.data().getMonth(),
+                                1, 0, 0, 0
+                        )
                 ))
-                .entrySet().stream()
-                .map(gastoResponse ->
-                        new TipoGastoEValorResponse(gastoResponse.getKey(), gastoResponse.getValue())).toList();
+                .entrySet()
+                .stream()
+                // Para cada mês, agrupar por tipo e somar valores
+                .map(mesEntry -> {
+                    LocalDateTime mes = mesEntry.getKey();
+                    List<GastosReponse> gastosDoMes = mesEntry.getValue();
+
+                    // Agrupar por categoria e somar valores
+                    List<TipoGastoEValorResponse> gastosValores = gastosDoMes
+                            .stream()
+                            .collect(Collectors.groupingBy(
+                                    GastosReponse::tipo,
+                                    Collectors.reducing(
+                                            BigDecimal.ZERO,
+                                            GastosReponse::valor,
+                                            BigDecimal::add
+                                    )
+                            ))
+                            .entrySet()
+                            .stream()
+                            .map(categoriaEntry -> new TipoGastoEValorResponse(
+                                    categoriaEntry.getKey(), // categoria
+                                    categoriaEntry.getValue() // totalGasto
+                            ))
+                            .sorted(Comparator.comparing(TipoGastoEValorResponse::totalGasto).reversed())
+                            .toList();
+
+                    return new MesTipoGastoEValorResponse(mes, gastosValores);
+                })
+                // Ordenar por mês (do mais recente para o mais antigo)
+                .sorted(Comparator.comparing(MesTipoGastoEValorResponse::mes).reversed())
+                .toList();
 
         return new BaseResponse(
                 "Gastos encontrados.",
                 HttpStatus.OK,
-                todosGastos
+                gastosReponse
         );
 
     }
 
-    public BaseResponse calcularGastoDaContaPorDia(String idUsuario, String idConta, int ano, int mes, int dia) {
+    public BaseResponse calcularGastoPorMesPorAno(String idUsuario, String idConta, int ano) {
         //Validação para ver se o usuário informado é válido
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
         if (usuarioEncontrado.isEmpty()) {
@@ -1624,9 +1789,7 @@ public class TransacaoService {
         List<GastosReponse> todosGastosBoletos = gastosBoleto
                 .stream()
                 .filter(pagamentoBoleto ->
-                        pagamentoBoleto.getData().getYear() == ano &&
-                                pagamentoBoleto.getData().getMonthValue() == mes &&
-                                pagamentoBoleto.getData().getDayOfMonth() == dia)
+                        pagamentoBoleto.getData().getYear() == ano)
                 .map(pagamentoBoleto -> new GastosReponse(
                         pagamentoBoleto.getData(),
                         pagamentoBoleto.getTipo(),
@@ -1637,9 +1800,7 @@ public class TransacaoService {
         List<GastosReponse> todosGastosDebito = gastosDebito
                 .stream()
                 .filter(pagamentoDebito ->
-                        pagamentoDebito.getData().getYear() == ano &&
-                                pagamentoDebito.getData().getMonthValue() == mes &&
-                                pagamentoDebito.getData().getDayOfMonth() == dia)
+                        pagamentoDebito.getData().getYear() == ano)
                 .map(pagamentoDebito -> new GastosReponse(
                         pagamentoDebito.getData(),
                         pagamentoDebito.getTipo(),
@@ -1650,9 +1811,7 @@ public class TransacaoService {
         List<GastosReponse> todosGastosPix = gastosPix
                 .stream()
                 .filter(pix ->
-                        pix.getData().getYear() == ano &&
-                                pix.getData().getMonthValue() == mes &&
-                                pix.getData().getDayOfMonth() == dia)
+                        pix.getData().getYear() == ano)
                 .map(pix -> new GastosReponse(
                         pix.getData(),
                         pix.getTipo(),
@@ -1664,9 +1823,7 @@ public class TransacaoService {
         List<GastosReponse> todosGastosTransferencia = gastosTransferencia
                 .stream()
                 .filter(transferencia ->
-                        transferencia.getData().getYear() == ano &&
-                                transferencia.getData().getMonthValue() == mes &&
-                                transferencia.getData().getDayOfMonth() == dia)
+                        transferencia.getData().getYear() == ano)
                 .map(transferencia -> new GastosReponse(
                         transferencia.getData(),
                         transferencia.getTipo(),
@@ -1683,31 +1840,48 @@ public class TransacaoService {
 
         if (todosGastos.isEmpty()) {
             return new BaseResponse(
-                    "Nenhum gasto encontrada na data " + dia + "/" + mes + "/" + ano,
+                    "Nenhum gasto encontrada no ano " + ano,
                     HttpStatus.OK,
                     null
             );
         }
 
-        List<TipoGastoEValorResponse> gastosReponses = todosGastos
+        // Agrupar por mês e somar todos os valores
+        List<MesTotalGastoResponse> gastosResponse = todosGastos
                 .stream()
-                .collect(Collectors.groupingBy(GastosReponse::tipo,
-                        Collectors.mapping(GastosReponse::valor,
-                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                // Agrupar por ano-mês e somar os valores
+                .collect(Collectors.groupingBy(
+                        gasto -> LocalDateTime.of(
+                                gasto.data().getYear(),
+                                gasto.data().getMonth(),
+                                1, 0, 0, 0
+                        ),
+                        Collectors.reducing(
+                                BigDecimal.ZERO,
+                                GastosReponse::valor,
+                                BigDecimal::add
+                        )
                 ))
-                .entrySet().stream()
-                .map(gastoResponse ->
-                        new TipoGastoEValorResponse(gastoResponse.getKey(), gastoResponse.getValue())).toList();
+                .entrySet()
+                .stream()
+                // Mapear para o response
+                .map(entry -> new MesTotalGastoResponse(
+                        entry.getKey().toString(),  // mes
+                        entry.getValue()             // totalGasto
+                ))
+                // Ordenar por mês (do mais antigo para o mais recente)
+                .sorted(Comparator.comparing(MesTotalGastoResponse::mes))
+                .toList();
 
         return new BaseResponse(
                 "Gastos encontrados.",
                 HttpStatus.OK,
-                gastosReponses
+                gastosResponse
         );
 
     }
 
-    public BaseResponse buscarTransacao (String idUsuario, String idConta, String idTransacao){
+    public BaseResponse buscarTransacao(String idUsuario, String idConta, String idTransacao) {
         //Validação para ver se o usuário informado é válido
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
         if (usuarioEncontrado.isEmpty()) {
@@ -1739,7 +1913,7 @@ public class TransacaoService {
         }
 
         Optional<Transacao> transacaoEncontrada = transacaoRepository.findById(idTransacao);
-        if (transacaoEncontrada.isEmpty()){
+        if (transacaoEncontrada.isEmpty()) {
             return new BaseResponse(
                     "Transação nao encontrada."
                     , HttpStatus.NOT_FOUND,
@@ -1851,7 +2025,10 @@ public class TransacaoService {
                             criarCarteira.getTipo(),
                             criarCarteira.getData(),
                             criarCarteira.getValor(),
-                            criarCarteira.getConta().getNumero()));
+                            criarCarteira.getConta().getNumero(),
+                            criarCarteira.getCarteira().getId(),
+                            criarCarteira.getCarteira().getNome()
+                    ));
         }
 
         if (transacao.getTipo().equalsIgnoreCase("DELETAR_CARTEIRA")) {
@@ -1872,7 +2049,10 @@ public class TransacaoService {
                             deletarCarteira.getTipo(),
                             deletarCarteira.getData(),
                             deletarCarteira.getValor(),
-                            deletarCarteira.getConta().getNumero()));
+                            deletarCarteira.getConta().getNumero(),
+                            deletarCarteira.getCarteira().getId(),
+                            deletarCarteira.getCarteira().getNome()
+                    ));
         }
 
         if (transacao.getTipo().equalsIgnoreCase("PAGAMENTO_BOLETO")) {
@@ -1927,42 +2107,40 @@ public class TransacaoService {
         if (transacao.getTipo().equalsIgnoreCase("PIX")) {
             Pix pix = (Pix) transacao;
 
-            if (!pix.getConta().getId().equals(conta.getId())) {
-                return new BaseResponse(
-                        "Transação não pertence à conta informada.",
-                        HttpStatus.CONFLICT,
-                        null
-                );
-            }
-
             Optional<Conta> contaDestino = contaRepository.findByChavePix(pix.getChavePixDestino());
 
-            if(contaDestino.isPresent()){
+            if (contaDestino.isPresent()) {
+                if (!pix.getConta().getId().equals(conta.getId()) && !pix.getChavePixDestino().equalsIgnoreCase(contaDestino.get().getChavePix())) {
+                    return new BaseResponse(
+                            "Transação não pertence à conta informada.",
+                            HttpStatus.CONFLICT,
+                            null
+                    );
+                }
 
-            return new BaseResponse("Transação encontrada!",
-                    HttpStatus.OK,
-                    new TransacaoPixResponse(
-                            pix.getId(),
-                            pix.getTipo(),
-                            pix.getData(),
-                            pix.getValor(),
-                            pix.getChavePixDestino(),
-                            contaDestino.get().getUsuario().getNome(),
-                            pix.getCategoria(),
-                            pix.getConta().getNumero()));
+                return new BaseResponse("Transação encontrada!",
+                        HttpStatus.OK,
+                        new TransacaoPixResponse(
+                                pix.getId(),
+                                pix.getTipo(),
+                                pix.getData(),
+                                pix.getValor(),
+                                pix.getConta().getUsuario().getNome(),
+                                pix.getChavePixDestino(),
+                                contaDestino.get().getUsuario().getNome(),
+                                pix.getCategoria()));
             }
+
+            return new BaseResponse(
+                    "Conta destino não encontrada!",
+                    HttpStatus.NOT_FOUND,
+                    null
+            );
         }
 
-        if (transacao.getTipo().equalsIgnoreCase("PAGAMENTO")) {
+        if (transacao.getTipo().equalsIgnoreCase("TRANSFERENCIA_EXTERNA")
+                || transacao.getTipo().equalsIgnoreCase("TRANSFERENCIA_INTERNA")) {
             Transferencia transferencia = (Transferencia) transacao;
-
-            if (!transferencia.getContaOrigem().getId().equals(conta.getId())) {
-                return new BaseResponse(
-                        "Transação não pertence à conta informada.",
-                        HttpStatus.CONFLICT,
-                        null
-                );
-            }
 
             return new BaseResponse("Transação encontrada!",
                     HttpStatus.OK,
@@ -1974,9 +2152,7 @@ public class TransacaoService {
                             transferencia.getContaOrigem().getNumero(),
                             transferencia.getNumeroContaDestino(),
                             transferencia.getCategoria()));
-        }
-
-        else {
+        } else {
             return new BaseResponse(
                     "Tipo de transação inválida.",
                     HttpStatus.NOT_FOUND,
@@ -1985,7 +2161,116 @@ public class TransacaoService {
         }
 
 
+    }
 
+    public BaseResponse listarTransacoesPorTipoPorMes(String idUsuario, String idConta, int ano, int mes) {
+        //Validação para ver se o usuário informado é válido
+        Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
+        if (usuarioEncontrado.isEmpty()) {
+            return new BaseResponse(
+                    "Usuario nao encontrado.",
+                    HttpStatus.NOT_FOUND,
+                    null
+            );
+        }
+        Usuario usuario = usuarioEncontrado.get();
+
+        //Validação para ver se a conta informada é válida
+        Optional<Conta> contaEncontrada = contaRepository.findById(idConta);
+        if (contaEncontrada.isEmpty()) {
+            return new BaseResponse(
+                    "Conta nao encontrada."
+                    , HttpStatus.NOT_FOUND,
+                    null);
+        }
+        Conta conta = contaEncontrada.get();
+
+        //Validação para saber se a conta pertence ao usuario informado
+        if (!conta.getUsuario().getId().equalsIgnoreCase(usuario.getId())) {
+            return new BaseResponse(
+                    "Conta nao pertence ao usuario informado.",
+                    HttpStatus.CONFLICT,
+                    null
+            );
+        }
+
+        List<PagamentoBoleto> gastosBoleto = pagamentoBoletoRepository.findByContaId(idConta);
+        List<PagamentoDebito> gastosDebito = pagamentoDebitoRepository.findByContaId(idConta);
+        List<Pix> gastosPix = pixRepository.findByContaId(idConta);
+        List<Transferencia> gastosTransferencia = transferenciaRepository.findByContaOrigem_Id(idConta);
+
+        List<TransacaoPorCategoriaResponse> todosGastosBoletos = gastosBoleto
+                .stream()
+                .filter(pagamentoBoleto ->
+                        pagamentoBoleto.getData().getYear() == ano &&
+                                pagamentoBoleto.getData().getMonthValue() == mes)
+                .map(pagamentoBoleto -> new TransacaoPorCategoriaResponse(
+                        pagamentoBoleto.getId(),
+                        pagamentoBoleto.getData(),
+                        pagamentoBoleto.getTipo(),
+                        pagamentoBoleto.getValor()
+                )).toList();
+
+        List<TransacaoPorCategoriaResponse> todosGastosDebito = gastosDebito
+                .stream()
+                .filter(pagamentoDebito ->
+                        pagamentoDebito.getData().getYear() == ano &&
+                                pagamentoDebito.getData().getMonthValue() == mes
+                                )
+                .map(pagamentoDebito -> new TransacaoPorCategoriaResponse(
+                        pagamentoDebito.getId(),
+                        pagamentoDebito.getData(),
+                        pagamentoDebito.getTipo(),
+                        pagamentoDebito.getValor()
+                )).toList();
+
+        List<TransacaoPorCategoriaResponse> todosGastosPix = gastosPix
+                .stream()
+                .filter(pix ->
+                        pix.getData().getYear() == ano &&
+                                pix.getData().getMonthValue() == mes
+                               )
+                .map(pix -> new TransacaoPorCategoriaResponse(
+                        pix.getId(),
+                        pix.getData(),
+                        pix.getTipo(),
+                        pix.getValor()
+                ))
+                .toList();
+
+        List<TransacaoPorCategoriaResponse> todosGastosTransferencia = gastosTransferencia
+                .stream()
+                .filter(transferencia ->
+                        transferencia.getData().getYear() == ano &&
+                                transferencia.getData().getMonthValue() == mes
+                                )
+                .map(transferencia -> new TransacaoPorCategoriaResponse(
+                        transferencia.getId(),
+                        transferencia.getData(),
+                        transferencia.getTipo(),
+                        transferencia.getValor()
+                ))
+                .toList();
+
+        List<TransacaoPorCategoriaResponse> todosGastos = new ArrayList<>();
+        todosGastos.addAll(todosGastosBoletos);
+        todosGastos.addAll(todosGastosDebito);
+        todosGastos.addAll(todosGastosPix);
+        todosGastos.addAll(todosGastosTransferencia);
+
+        if (todosGastos.isEmpty()) {
+            return new BaseResponse(
+                    "Nenhum gasto encontrada no mes " + mes + "/" + ano ,
+                    HttpStatus.OK,
+                    null
+            );
+        }
+
+        return new BaseResponse(
+                "Gastos encontrados no mes " + mes + "/" + ano ,
+                HttpStatus.OK,
+                todosGastos
+        );
     }
 
 

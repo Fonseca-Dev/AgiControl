@@ -10,6 +10,7 @@ import java.util.Optional;
 
 @Repository
 public interface CarteiraRepository extends JpaRepository<Carteira,String> {
-    Optional<Carteira> findByContaIdAndNome(String contaId, String nome);
+    List<Carteira> findByContaIdAndNome(String contaId, String nome);
     List<Carteira> findByContaId(String contaId);
+    Optional<Carteira> findByNome(String nome);
 }

@@ -30,6 +30,7 @@ public class Transferencia extends Transacao implements TransacaoComCategoria {
     @JoinColumn(name = "id_contaDestino",nullable = true)
     private Conta contaDestino;
 
+
     private Long numeroContaDestino;
     @NotBlank
     private String categoria;

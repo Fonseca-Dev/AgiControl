@@ -9,6 +9,7 @@ import com.example.Sistema_Gastos_Review.service.UsuarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 @CrossOrigin(
         origins = {"https://fonseca-dev.github.io", "http://localhost:5500"},
         allowCredentials = "true",
@@ -32,20 +33,23 @@ public class UsuarioController {
         return ResponseEntity.status(response.status()).body(response);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse> alterarUsuario(@PathVariable String id, @RequestBody AlterarUsuarioRequest request){
-        BaseResponse response = usuarioService.alterarUsuario(id,request);
+    @PutMapping("/{id}/contas/{idConta}")
+    public ResponseEntity<BaseResponse> alterarUsuario(
+            @PathVariable String id,
+            @PathVariable String idConta,
+            @RequestBody AlterarUsuarioRequest request) {
+        BaseResponse response = usuarioService.alterarUsuario(id, idConta, request);
         return ResponseEntity.status(response.status()).body(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse> deletarUsuario(@PathVariable String id){
+    public ResponseEntity<BaseResponse> deletarUsuario(@PathVariable String id) {
         BaseResponse response = usuarioService.deletarUsuario(id);
         return ResponseEntity.status(response.status()).body(response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<BaseResponse> loginPorEmailESenha(@RequestBody LoginUsuarioRequest request){
+    public ResponseEntity<BaseResponse> loginPorEmailESenha(@RequestBody LoginUsuarioRequest request) {
         BaseResponse response = usuarioService.loginPorEmailESenha(request);
         return ResponseEntity.status(response.status()).body(response);
     }
@@ -54,8 +58,8 @@ public class UsuarioController {
     public ResponseEntity<BaseResponse> confirmarSenha(
             @PathVariable String idUsuario,
             @RequestBody ConfirmarSenhaRequest request
-    ){
-        BaseResponse response = usuarioService.confirmarSenha(idUsuario,request);
+    ) {
+        BaseResponse response = usuarioService.confirmarSenha(idUsuario, request);
         return ResponseEntity.status(response.status()).body(response);
     }
 }

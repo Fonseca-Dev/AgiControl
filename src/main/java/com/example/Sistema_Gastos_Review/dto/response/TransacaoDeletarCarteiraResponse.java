@@ -8,6 +8,8 @@ public record TransacaoDeletarCarteiraResponse(
         String tipo,
         LocalDateTime data,
         BigDecimal valor,
-        Long numConta
+        Long numConta,
+        String idCarteira,
+        String nomeCarteira
 ) {
 }

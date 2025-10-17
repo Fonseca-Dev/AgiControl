@@ -14,6 +14,7 @@ import com.example.Sistema_Gastos_Review.repository.TransacaoRepository;
 import com.example.Sistema_Gastos_Review.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
@@ -47,7 +48,7 @@ public class CarteiraService {
                     null);
         }
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
-        if(usuarioEncontrado.isEmpty()){
+        if (usuarioEncontrado.isEmpty()) {
             return new BaseResponse(
                     "Criacao de carteira negada! Usuario nao encontrado.",
                     HttpStatus.NOT_FOUND,
@@ -74,13 +75,22 @@ public class CarteiraService {
                     HttpStatus.CONFLICT,
                     ContaMapper.toDeletarContaResponse(conta));
         }
-        Optional<Carteira> carteiraEncontrada = carteiraRepository.findByContaIdAndNome(idConta, request.nome().toUpperCase());
-        if (carteiraEncontrada.isPresent()) {
+
+        // ✅ CORREÇÃO: Verificar se JÁ EXISTE uma carteira ATIVA com o mesmo nome
+        List<Carteira> carteirasEncontradas = carteiraRepository.findByContaIdAndNome(conta.getId(), request.nome());
+
+        // Verificar se existe alguma carteira com o mesmo nome que NÃO está deletada
+        boolean existeCarteiraAtiva = carteirasEncontradas.stream()
+                .anyMatch(carteira -> !carteira.getEstado().equalsIgnoreCase("DELETADA"));
+
+        if (existeCarteiraAtiva) {
             return new BaseResponse(
-                    "Criacao de carteira negada! Carteira ja criada com esse nome.",
+                    "Criacao de carteira negada! Ja existe uma carteira com esse nome nesta conta.",
                     HttpStatus.CONFLICT,
-                    CarteiraMapper.toCriarCarteiraResponse(carteiraEncontrada.get()));
+                    null);
         }
+
+
         if (request.saldo() == null || request.saldo().compareTo(BigDecimal.ZERO) < 0) {
             return new BaseResponse(
                     "Criacao de carteira negada! Saldo inicial da carteira invalido.",
@@ -93,7 +103,7 @@ public class CarteiraService {
                     HttpStatus.CONFLICT,
                     null);
         }
-        if (request.saldo().compareTo(request.meta()) >= 0){
+        if (request.saldo().compareTo(request.meta()) >= 0) {
             return new BaseResponse(
                     "Criação de carteira negada! Meta deve ser maior que valor inicial.",
                     HttpStatus.CONFLICT,
@@ -102,11 +112,13 @@ public class CarteiraService {
         }
 
         Carteira nova = CarteiraMapper.toEntity(conta, request);
-        contaEncontrada.get().setSaldo(contaEncontrada.get().getSaldo().subtract(request.saldo()));
-        CriarCarteira criarCarteira = TransacaoMapper.toCriarCarteiraEntity(request,conta);
-        contaRepository.save(contaEncontrada.get());
         carteiraRepository.save(nova);
+        contaEncontrada.get().setSaldo(contaEncontrada.get().getSaldo().subtract(request.saldo()));
+        contaRepository.save(contaEncontrada.get());
+        CriarCarteira criarCarteira = TransacaoMapper.toCriarCarteiraEntity(request, conta, nova);
         transacaoRepository.save(criarCarteira);
+
+
         return new BaseResponse("Carteira criada com sucesso.",
                 HttpStatus.CREATED,
                 CarteiraMapper.toCriarCarteiraResponse(nova));
@@ -114,7 +126,7 @@ public class CarteiraService {
 
     public BaseResponse alterarCarteira(String idUsuario, String idConta, String idCarteira, AlterarCarteiraRequest request) {
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
-        if (usuarioEncontrado.isEmpty()){
+        if (usuarioEncontrado.isEmpty()) {
             return new BaseResponse(
                     "Alteracao de carteira negada! Usuario nao encontrado.",
                     HttpStatus.NOT_FOUND,
@@ -122,7 +134,7 @@ public class CarteiraService {
         }
         Usuario usuario = usuarioEncontrado.get();
         Optional<Conta> contaEncontrada = contaRepository.findById(idConta);
-        if(contaEncontrada.isEmpty()){
+        if (contaEncontrada.isEmpty()) {
             return new BaseResponse(
                     "Alteracao de carteira negada! Conta nao encontrada.",
                     HttpStatus.NOT_FOUND,
@@ -137,28 +149,31 @@ public class CarteiraService {
                     null);
         }
         Carteira carteira = carteiraEncontrada.get();
-        if(!carteira.getConta().getId().equalsIgnoreCase(conta.getId())){
+        if (!carteira.getConta().getId().equalsIgnoreCase(conta.getId())) {
             return new BaseResponse(
                     "Alteracao de carteira negada! Carteira nao pertence a conta informada.",
                     HttpStatus.FORBIDDEN,
                     null);
         }
-        if(!conta.getUsuario().getId().equalsIgnoreCase(usuario.getId())){
+        if (!conta.getUsuario().getId().equalsIgnoreCase(usuario.getId())) {
             return new BaseResponse(
                     "Alteracao de carteira negada! Conta nao pertence ao usuario informado.",
                     HttpStatus.FORBIDDEN,
                     null);
         }
-        Optional<Carteira> mesmoNome = carteiraRepository.findByContaIdAndNome(conta.getId(), request.nome());
-        if(mesmoNome.isPresent()
-                && !mesmoNome.get().getEstado().equalsIgnoreCase("DELETADA")
-                && !mesmoNome.get().getId().equalsIgnoreCase(carteira.getId())){
+        List<Carteira> mesmoNome = carteiraRepository.findByContaIdAndNome(conta.getId(), request.nome());
+
+        // Verificar se existe alguma carteira com o mesmo nome que NÃO está deletada
+        boolean existeCarteiraAtiva = mesmoNome.stream()
+                .anyMatch(card -> !carteira.getEstado().equalsIgnoreCase("DELETADA"));
+
+        if (existeCarteiraAtiva) {
             return new BaseResponse(
-                    "Alteracao de carteira negada! Ja existe uma carteira com esse nome.",
+                    "Alteracao de carteira negada! Ja existe uma carteira com esse nome nesta conta.",
                     HttpStatus.CONFLICT,
-                    null
-            );
+                    null);
         }
+
         CarteiraMapper.atualizarCarteira(carteira, request);
         carteiraRepository.save(carteira);
         return new BaseResponse(
@@ -168,7 +183,7 @@ public class CarteiraService {
 
     public BaseResponse deletarCarteira(String idUsuario, String idConta, String idCarteira, DeletarCarteiraRequest request) {
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
-        if (usuarioEncontrado.isEmpty()){
+        if (usuarioEncontrado.isEmpty()) {
             return new BaseResponse(
                     "Delecao de carteira negada! Usuario nao encontrado.",
                     HttpStatus.NOT_FOUND,
@@ -176,7 +191,7 @@ public class CarteiraService {
         }
         Usuario usuario = usuarioEncontrado.get();
         Optional<Conta> contaEncontrada = contaRepository.findById(idConta);
-        if(contaEncontrada.isEmpty()){
+        if (contaEncontrada.isEmpty()) {
             return new BaseResponse(
                     "Delecao de carteira negada! Conta nao encontrada.",
                     HttpStatus.NOT_FOUND,
@@ -192,13 +207,13 @@ public class CarteiraService {
             );
         }
         Carteira carteira = carteiraEncontrada.get();
-        if(!carteira.getConta().getId().equalsIgnoreCase(conta.getId())){
+        if (!carteira.getConta().getId().equalsIgnoreCase(conta.getId())) {
             return new BaseResponse(
                     "Delecao de carteira negada! Carteira nao pertence a conta informada.",
                     HttpStatus.FORBIDDEN,
                     null);
         }
-        if(!conta.getUsuario().getId().equalsIgnoreCase(usuario.getId())){
+        if (!conta.getUsuario().getId().equalsIgnoreCase(usuario.getId())) {
             return new BaseResponse(
                     "Delecao de carteira negada! Conta nao pertence ao usuario informado.",
                     HttpStatus.FORBIDDEN,
@@ -209,15 +224,16 @@ public class CarteiraService {
         contaRepository.save(conta);
         carteiraRepository.save(carteira);
         transacaoRepository.save(deletarCarteira);
+
         return new BaseResponse(
                 "Carteira deletada com sucesso.",
                 HttpStatus.OK,
                 CarteiraMapper.toDeletarCarteiraResponse(carteira));
     }
 
-    public BaseResponse buscarCarteirasPorConta(String idUsuario, String idConta){
+    public BaseResponse buscarCarteirasPorConta(String idUsuario, String idConta) {
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
-        if(usuarioEncontrado.isEmpty()){
+        if (usuarioEncontrado.isEmpty()) {
             return new BaseResponse(
                     "Busca de carteiras negada! Usuario nao encontrado.",
                     HttpStatus.NOT_FOUND,
@@ -246,10 +262,10 @@ public class CarteiraService {
         }
         List<Carteira> carteiras = carteiraRepository.findByContaId(conta.getId());
 
-        if(carteiras.isEmpty()){
+        if (carteiras.isEmpty()) {
             return new BaseResponse(
                     "Nenhuma carteira encontrada nesta conta.",
-                    HttpStatus.NOT_FOUND,
+                    HttpStatus.OK,
                     null
             );
         }
@@ -261,9 +277,9 @@ public class CarteiraService {
         );
     }
 
-    public BaseResponse buscarCarteiraPeloID (String idUsuario, String idConta, String idCarteira){
+    public BaseResponse buscarCarteiraPeloID(String idUsuario, String idConta, String idCarteira) {
         Optional<Usuario> usuarioEncontrado = usuarioRepository.findById(idUsuario);
-        if(usuarioEncontrado.isEmpty()){
+        if (usuarioEncontrado.isEmpty()) {
             return new BaseResponse(
                     "Busca de carteira negada! Usuario nao encontrado.",
                     HttpStatus.NOT_FOUND,
@@ -280,7 +296,7 @@ public class CarteiraService {
         }
         Conta conta = contaEncontrada.get();
         Optional<Carteira> carteiraEncontrada = carteiraRepository.findById(idCarteira);
-        if(carteiraEncontrada.isEmpty()){
+        if (carteiraEncontrada.isEmpty()) {
             return new BaseResponse(
                     "Carteira nao encontrada.",
                     HttpStatus.NOT_FOUND,
@@ -299,13 +315,13 @@ public class CarteiraService {
                     HttpStatus.CONFLICT,
                     null);
         }
-        if(!carteira.getConta().getId().equalsIgnoreCase(conta.getId())){
+        if (!carteira.getConta().getId().equalsIgnoreCase(conta.getId())) {
             return new BaseResponse(
                     "Buscas de carteiras negada! Carteira não pertence a conta informada.",
                     HttpStatus.CONFLICT,
                     null);
         }
-        if(carteira.getEstado().equalsIgnoreCase("DELETADA")){
+        if (carteira.getEstado().equalsIgnoreCase("DELETADA")) {
             return new BaseResponse("Carteira deletada.",
                     HttpStatus.CONFLICT,
                     null);

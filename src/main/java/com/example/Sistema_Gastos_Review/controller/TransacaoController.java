@@ -83,15 +83,7 @@ public class TransacaoController {
         return ResponseEntity.status(response.status()).body(response);
     }
 
-    @GetMapping("/transacoes/categorias-mais-usadas")
-    public ResponseEntity<BaseResponse> categoriasMaisUsadasPorConta(
-            @PathVariable String idUsuario,
-            @PathVariable String idConta,
-            @RequestParam int ano,
-            @RequestParam int mes){
-        BaseResponse response = transacaoService.categoriasMaisUsadasPorContaMesAno(idUsuario, idConta, ano, mes);
-        return ResponseEntity.status(response.status()).body(response);
-    }
+
 
     @PostMapping("/transacoes/pagamentosBoleto")
     public ResponseEntity<BaseResponse> criarPagamentoBoleto(
@@ -123,17 +115,10 @@ public class TransacaoController {
         return ResponseEntity.status(response.status()).body(response);
     }
 
-    @GetMapping("/gastosPorAno")
-    public ResponseEntity<BaseResponse> calcularGastoDaContaPorAno(
-            @PathVariable String idUsuario,
-            @PathVariable String idConta,
-            @RequestParam int ano
-    ){
-        BaseResponse response = transacaoService.calcularGastoDaContaPorAno(idUsuario, idConta, ano);
-        return ResponseEntity.status(response.status()).body(response);
-    }
 
-    @GetMapping("/gastosPorMes")
+
+    //Utilizado para criar o gráfico em barras
+    @GetMapping("/transacoes/gastosPorMes")
     public ResponseEntity<BaseResponse> calcularGastoDaContaPorMes(
             @PathVariable String idUsuario,
             @PathVariable String idConta,
@@ -143,19 +128,29 @@ public class TransacaoController {
         BaseResponse response = transacaoService.calcularGastoDaContaPorMes(idUsuario, idConta, ano, mes);
         return ResponseEntity.status(response.status()).body(response);
     }
-
-    @GetMapping("/resumoGastoDaContaPorMes")
-    public ResponseEntity<BaseResponse> calcularGastoDaContaPorMesPorTipoTransacao(
+    //Usado para composição do gráfico rosca
+    @GetMapping("/transacoes/categorias-mais-usadas")
+    public ResponseEntity<BaseResponse> categoriasMaisUsadasPorConta(
             @PathVariable String idUsuario,
             @PathVariable String idConta,
             @RequestParam int ano,
-            @RequestParam int mes
-    ){
-        BaseResponse response = transacaoService.calcularGastoDaContaPorMesPorTipoTransacao(idUsuario, idConta, ano, mes);
+            @RequestParam int mes){
+        BaseResponse response = transacaoService.categoriasMaisUsadasPorContaMesAno(idUsuario, idConta, ano, mes);
         return ResponseEntity.status(response.status()).body(response);
     }
 
-    @GetMapping("/gastosPorDia")
+    @GetMapping("/transacoes/gastosPorAno")
+    public ResponseEntity<BaseResponse> calcularGastoDaContaPorAno(
+            @PathVariable String idUsuario,
+            @PathVariable String idConta,
+            @RequestParam int ano
+    ){
+        BaseResponse response = transacaoService.calcularGastoPorCategoriaPorMesPorAno(idUsuario, idConta, ano);
+        return ResponseEntity.status(response.status()).body(response);
+    }
+
+    //Usado no Card "Resumo de gastos de hoje"
+    @GetMapping("/transacoes/resumoGastoDaContaPorDia")
     public ResponseEntity<BaseResponse> calcularGastoDaContaPorDia(
             @PathVariable String idUsuario,
             @PathVariable String idConta,
@@ -167,6 +162,19 @@ public class TransacaoController {
         return ResponseEntity.status(response.status()).body(response);
     }
 
+    //Usado no Card "Resumo de gastos do mês atual"
+    @GetMapping("/transacoes/resumoGastoDaContaPorMes")
+    public ResponseEntity<BaseResponse> calcularGastoDaContaPorMesPorTipoTransacao(
+            @PathVariable String idUsuario,
+            @PathVariable String idConta,
+            @RequestParam int ano,
+            @RequestParam int mes
+    ){
+        BaseResponse response = transacaoService.calcularGastoDaContaPorMesPorTipoTransacao(idUsuario, idConta, ano, mes);
+        return ResponseEntity.status(response.status()).body(response);
+    }
+
+    //Usado para compor a aba "Relatórios"
     @GetMapping("/transacoes/por-dia")
     public ResponseEntity<BaseResponse> listarTransacoesPorCategoriaPorDia(
             @PathVariable String idUsuario,
@@ -180,6 +188,7 @@ public class TransacaoController {
         return ResponseEntity.status(response.status()).body(response);
     }
 
+    //Usado para compor a aba "Relatórios"
     @GetMapping("/transacoes/por-mes")
     public ResponseEntity<BaseResponse> listarTransacoesPorCategoriaPorMes(
             @PathVariable String idUsuario,
@@ -201,6 +210,18 @@ public class TransacaoController {
         BaseResponse response = transacaoService.buscarTransacao(idUsuario, idConta, idTransacao);
         return ResponseEntity.status(response.status()).body(response);
     }
+
+    //Usado para geração do Grafico Anual
+    @GetMapping("transacoes/gastosPorMesAno")
+    public ResponseEntity<BaseResponse> calcularGastoPorMesPorAno(
+            @PathVariable String idUsuario,
+            @PathVariable String idConta,
+            @RequestParam int ano
+    ){
+        BaseResponse response = transacaoService.calcularGastoPorMesPorAno(idUsuario, idConta, ano);
+        return ResponseEntity.status(response.status()).body(response);
+    }
+
 
 
 

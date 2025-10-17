@@ -1,9 +1,6 @@
 package com.example.Sistema_Gastos_Review.entity;
 
-import jakarta.persistence.DiscriminatorValue;
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,4 +20,8 @@ public class DeletarCarteira extends Transacao{
     @ManyToOne
     @JoinColumn(name = "id_conta",nullable = false)
     private Conta conta;
+
+    @OneToOne
+    @JoinColumn(name = "id_carteira", nullable = false, unique = true)
+    private Carteira carteira;
 }

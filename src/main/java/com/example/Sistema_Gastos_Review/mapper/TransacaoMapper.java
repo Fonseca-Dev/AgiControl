@@ -108,6 +108,7 @@ public class TransacaoMapper {
         return Transferencia.builder()
                 .contaOrigem(contaOrigem)
                 .contaDestino(contaDestino)
+                .numeroContaDestino(contaDestino.getNumero())
                 .tipo("TRANSFERENCIA_INTERNA")
                 .valor(request.valor())
                 .categoria(request.categoria())
@@ -164,6 +165,7 @@ public class TransacaoMapper {
         lista.addAll(
                 depositos.stream()
                         .map(d -> new TransacaoContaResponse(
+                                d.getId(),
                                 d.getTipo(),
                                 d.getData(),
                                 new DepositoResponse(d.getData(), d.getConta().getId(), d.getConta().getNumero(), d.getValor())
@@ -174,6 +176,7 @@ public class TransacaoMapper {
         lista.addAll(
                 saques.stream()
                         .map(s -> new TransacaoContaResponse(
+                                s.getId(),
                                 s.getTipo(),
                                 s.getData(),
                                 new SaqueResponse(s.getData(), s.getConta().getId(), s.getConta().getNumero(), s.getValor().negate())
@@ -184,6 +187,7 @@ public class TransacaoMapper {
         lista.addAll(
                 contaCarteiraList.stream()
                         .map(cc -> new TransacaoContaResponse(
+                                cc.getId(),
                                 cc.getTipo(),
                                 cc.getData(),
                                 new ContaCarteiraResponse(cc.getData(), cc.getConta().getId(), cc.getConta().getNumero(), cc.getValor(), cc.getCarteira().getId())
@@ -194,6 +198,7 @@ public class TransacaoMapper {
         lista.addAll(
                 transferenciasEnviadas.stream()
                         .map(p -> new TransacaoContaResponse(
+                                p.getId(),
                                 p.getTipo(),
                                 p.getData(),
                                 new TransferenciaResponse(
@@ -212,6 +217,7 @@ public class TransacaoMapper {
         lista.addAll(
                 criarCarteiraList.stream()
                         .map(criarCarteira -> new TransacaoContaResponse(
+                                criarCarteira.getId(),
                                 criarCarteira.getTipo(),
                                 criarCarteira.getData(),
                                 new CarteiraResponse(
@@ -225,6 +231,7 @@ public class TransacaoMapper {
         lista.addAll(
                 deletarCarteiraList.stream()
                         .map(deletarCarteira -> new TransacaoContaResponse(
+                                deletarCarteira.getId(),
                                 deletarCarteira.getTipo(),
                                 deletarCarteira.getData(),
                                 new CarteiraResponse(
@@ -238,6 +245,7 @@ public class TransacaoMapper {
         lista.addAll(
                 pagamentoBoletoList.stream()
                         .map(pagamentoBoleto -> new TransacaoContaResponse(
+                                pagamentoBoleto.getId(),
                                 pagamentoBoleto.getTipo(),
                                 pagamentoBoleto.getData(),
                                 new PagamentoBoletoResponse(
@@ -255,6 +263,7 @@ public class TransacaoMapper {
         lista.addAll(
                 pagamentoDebitoList.stream()
                         .map(pagamentoDebito -> new TransacaoContaResponse(
+                                pagamentoDebito.getId(),
                                 pagamentoDebito.getTipo(),
                                 pagamentoDebito.getData(),
                                 new PagamentoDebitoResponse(
@@ -270,6 +279,7 @@ public class TransacaoMapper {
         lista.addAll(
                 pixEnviado.stream()
                         .map(pix -> new TransacaoContaResponse(
+                                pix.getId(),
                                 pix.getTipo(),
                                 pix.getData(),
                                 new PixResponse(
@@ -285,6 +295,7 @@ public class TransacaoMapper {
         lista.addAll(
                 transferenciasRecebidas.stream()
                         .map(p -> new TransacaoContaResponse(
+                                p.getId(),
                                 "TRANSFERENCIA_RECEBIDA",
                                 p.getData(),
                                 new TransferenciaResponse(
@@ -292,8 +303,8 @@ public class TransacaoMapper {
                                         p.getContaOrigem().getId(),
                                         p.getContaOrigem().getNumero(),
                                         p.getValor(),
-                                        p.getContaDestino() != null ? p.getContaDestino().getId() : null,
-                                        p.getNumeroContaDestino(),
+                                        p.getContaDestino().getId(),
+                                        p.getContaDestino().getNumero(),
                                         p.getCategoria()
                                 )
                         ))
@@ -303,6 +314,7 @@ public class TransacaoMapper {
         lista.addAll(
                 pixRecebido.stream()
                         .map(pix -> new TransacaoContaResponse(
+                                pix.getId(),
                                 "PIX_RECEBIDO",
                                 pix.getData(),
                                 new PixResponse(
@@ -325,19 +337,22 @@ public class TransacaoMapper {
     ) {
         return new ArrayList<>(
                 contaCarteiraList.stream().map(cc -> new TransacaoCarteiraResponse(
-                        cc.getConta().getId(),
-                        cc.getConta().getNumero(),
-                        cc.getCarteira().getId(),
-                        cc.getTipo(),
-                        cc.getData(),
-                        cc.getValor()
-                )).toList());
+                                cc.getConta().getId(),
+                                cc.getConta().getNumero(),
+                                cc.getCarteira().getId(),
+                                cc.getTipo(),
+                                cc.getData(),
+                                cc.getValor()
+                        )).sorted(Comparator.comparing(TransacaoCarteiraResponse::data).reversed())
+                        .toList());
+
     }
 
-    public static CriarCarteira toCriarCarteiraEntity(CriarCarteiraRequest request, Conta conta) {
+    public static CriarCarteira toCriarCarteiraEntity(CriarCarteiraRequest request, Conta conta, Carteira carteira) {
         return CriarCarteira
                 .builder()
                 .conta(conta)
+                .carteira(carteira)
                 .tipo("CRIAR_CARTEIRA")
                 .valor(request.saldo())
                 .data(LocalDateTime.parse(request.dataHoraLocal()))
@@ -349,6 +364,7 @@ public class TransacaoMapper {
         return DeletarCarteira
                 .builder()
                 .conta(conta)
+                .carteira(carteira)
                 .tipo("DELETAR_CARTEIRA")
                 .valor(carteira.getSaldo())
                 .data(LocalDateTime.parse(request.dataHoraLocal()))

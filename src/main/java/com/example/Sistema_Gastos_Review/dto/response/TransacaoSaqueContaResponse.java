@@ -8,6 +8,6 @@ public record TransacaoSaqueContaResponse(
         String tipo,
         LocalDateTime data,
         BigDecimal valor,
-        Long numeroConta
+        Long numConta
 ) {
 }
