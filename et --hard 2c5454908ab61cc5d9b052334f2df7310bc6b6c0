@@ -1,0 +1,18 @@
+[33m2c54549[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: checkout: moving from master to master
+[33m2c54549[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: branch: Reset to origin/master
+[33m2c54549[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{2}: checkout: moving from b2cd3379a1f2a346334a3b37edc9ba2b5531c5a7 to master
+[33mb2cd337[m HEAD@{3}: checkout: moving from master to b2cd337
+[33m2c54549[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{4}: reset: moving to 2c5454908ab61cc5d9b052334f2df7310bc6b6c0
+[33m0255c74[m HEAD@{5}: commit: Revert "Projeto Finalizado"
+[33m2c54549[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{6}: reset: moving to 2c5454908ab61cc5d9b052334f2df7310bc6b6c0
+[33m2c54549[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{7}: commit: Projeto Finalizado
+[33m4de7667[m HEAD@{8}: reset: moving to 4de766715eeec3c00c4636bcd1c836635b12535b
+[33m4de7667[m HEAD@{9}: reset: moving to 4de766715eeec3c00c4636bcd1c836635b12535b
+[33mb5040c7[m HEAD@{10}: revert: Revert "Projeto Finalizado"
+[33m4de7667[m HEAD@{11}: checkout: moving from 4de766715eeec3c00c4636bcd1c836635b12535b to master
+[33m4de7667[m HEAD@{12}: checkout: moving from master to 4de766715eeec3c00c4636bcd1c836635b12535b
+[33m4de7667[m HEAD@{13}: reset: moving to 4de766715eeec3c00c4636bcd1c836635b12535b
+[33m4de7667[m HEAD@{14}: merge origin/master: Fast-forward
+[33mb2cd337[m HEAD@{15}: reset: moving to b2cd3379a1f2a346334a3b37edc9ba2b5531c5a7
+[33m4de7667[m HEAD@{16}: commit: Projeto Finalizado
+[33mb2cd337[m HEAD@{17}: commit (initial): Projeto Finalizado

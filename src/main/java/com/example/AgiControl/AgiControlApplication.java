@@ -1,13 +1,13 @@
-package com.example.Sistema_Gastos_Review;
+package com.example.AgiControl;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class SistemaGastosReviewApplication {
+public class AgiControlApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SistemaGastosReviewApplication.class, args);
+		SpringApplication.run(AgiControlApplication.class, args);
 	}
 
 }
